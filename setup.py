@@ -13,7 +13,7 @@ setup(
     description=DESCRIPTION,
     long_description=LONG_DESCRIPTION,
     packages=find_packages(),
-    install_requires=["requests", "phonenumbers", "htmlmin"],
+    install_requires=["aiohttp", "phonenumbers", "htmlmin"],
     keywords=['python', 'contiguity', 'sms', 'email', 'otp'],
 )
 

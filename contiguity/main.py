@@ -1,5 +1,5 @@
 import re
-import requests
+import aiohttp
 import phonenumbers
 import json
 from htmlmin import minify

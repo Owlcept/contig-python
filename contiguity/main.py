@@ -13,9 +13,10 @@ class Contiguity:
         debug (bool, optional): A flag indicating whether to enable debug mode. Default is False.
     """
 
-    def __init__(self, token, debug=False):
+    def __init__(self, token, debug=False, beta=False):
         self.token = token.strip()
         self.debug = debug
+        self.beta = beta
         self.baseURL = "https://api.contiguity.co"
         self.orwellBaseURL = "https://orwell.contiguity.co"
         self.headers = {
@@ -28,7 +29,7 @@ class Contiguity:
         """
         Returns an instance of the Send class.
         """
-        return Send(self.token, self.baseURL, self.headers, self.debug)
+        return Send(self.token, self.baseURL, self.headers, self.debug, self.beta)
 
     @property
     def verify(self):
@@ -71,10 +72,13 @@ class Send:
     Send class for Contiguity.
     """
 
-    def __init__(self, token, baseURL, headers, debug=False):
+    def __init__(self, token, baseURL, headers, debug=False, beta=False):
         self.token = token
         self.baseURL = baseURL
         self.debug = debug
+        self.beta = (
+            {"beta_features": {"imessage": True, "fallback": True}} if beta else {}
+        )
         self.headers = headers
 
     def text(self, obj):
@@ -116,8 +120,8 @@ class Send:
                     parsed_number, phonenumbers.PhoneNumberFormat.E164
                 ),
                 "message": obj["message"],
-                "beta_features": {"imessage": True, "fallback": True},
-            },
+            }
+            | self.beta,
             headers=self.headers,
         )
         text_handler_response = text_handler.json()
@@ -205,7 +209,7 @@ class Verify:
         try:
             validity = phonenumbers.is_valid_number(phonenumbers.parse(number))
             return validity
-        except Exception as e:
+        except Exception:
             return False
 
     def email(self, email):

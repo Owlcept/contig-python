@@ -13,10 +13,9 @@ class Contiguity:
         debug (bool, optional): A flag indicating whether to enable debug mode. Default is False.
     """
 
-    def __init__(self, token, debug=False, beta=False):
+    def __init__(self, token, debug=False):
         self.token = token.strip()
         self.debug = debug
-        self.beta = beta
         self.baseURL = "https://api.contiguity.co"
         self.orwellBaseURL = "https://orwell.contiguity.co"
         self.headers = {
@@ -29,7 +28,7 @@ class Contiguity:
         """
         Returns an instance of the Send class.
         """
-        return Send(self.token, self.baseURL, self.headers, self.debug, self.beta)
+        return Send(self.token, self.baseURL, self.headers, self.debug)
 
     @property
     def verify(self):
@@ -72,14 +71,67 @@ class Send:
     Send class for Contiguity.
     """
 
-    def __init__(self, token, baseURL, headers, debug=False, beta=False):
+    def __init__(self, token, baseURL, headers, debug=False):
         self.token = token
         self.baseURL = baseURL
         self.debug = debug
-        self.beta = (
-            {"beta_features": {"imessage": True, "fallback": True}} if beta else {}
-        )
         self.headers = headers
+
+    def imes(self, obj):
+        """
+        Send a iMessage message.
+        Args:
+            obj (dict): The object containing the message details.
+                obj['to'] (str): The recipient's phone number.
+                obj['message'] (str): The message to send.
+        Returns:
+            dict: The response object.
+        Raises:
+            ValueError: Raises an error if required fields are missing or sending the message fails.
+        """
+        if "to" not in obj:
+            raise ValueError("Contiguity requires a recipient to be specified.")
+        if "message" not in obj:
+            raise ValueError("Contiguity requires a message to be provided.")
+        if not self.token:
+            raise ValueError(
+                "Contiguity requires a token/API key to be provided via contiguity.login('token')"
+            )
+
+        try:
+            parsed_number = phonenumbers.parse(obj["to"], None)
+            if not phonenumbers.is_valid_number(parsed_number):
+                raise ValueError(
+                    "Contiguity requires phone numbers to follow the E.164 format. Formatting failed."
+                )
+        except phonenumbers.phonenumberutil.NumberParseException:
+            raise ValueError(
+                "Contiguity requires phone numbers to follow the E.164 format. Parsing failed."
+            )
+
+        text_handler = requests.post(
+            f"{self.baseURL}/send/text",
+            json={
+                "to": phonenumbers.format_number(
+                    parsed_number, phonenumbers.PhoneNumberFormat.E164
+                ),
+                "message": obj["message"],
+                "beta_features": {"imessage": True, "fallback": True},
+            },
+            headers=self.headers,
+        )
+        text_handler_response = text_handler.json()
+
+        if text_handler.status_code != 200:
+            raise ValueError(
+                f"Contiguity couldn't send your message. Received: {text_handler.status_code} with reason: \"{text_handler_response['message']}\""
+            )
+        if self.debug:
+            print(
+                f"Contiguity successfully sent your text to {obj['to']}. Crumbs:\n\n{json.dumps(text_handler_response)}"
+            )
+
+        return text_handler_response
 
     def text(self, obj):
         """
@@ -120,8 +172,7 @@ class Send:
                     parsed_number, phonenumbers.PhoneNumberFormat.E164
                 ),
                 "message": obj["message"],
-            }
-            | self.beta,
+            },
             headers=self.headers,
         )
         text_handler_response = text_handler.json()

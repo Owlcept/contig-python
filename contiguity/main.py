@@ -251,63 +251,6 @@ class Send:
 
         return email_handler_response
 
-    def ent_email(self, obj):
-        """
-        Send an email.
-        Args:
-            obj (dict): The object containing the email details.
-                obj['to'] (str): The recipient's email address.
-                obj['from'] (str): The sender's name. The email address is selected automatically. Configure at contiguity.co/dashboard
-                obj['email'] (str): The sender's email address they would like to use
-                obj['subject'] (str): The email subject.
-                obj['html'] (str, optional): The HTML email body. Provide one body.
-        Returns:
-            dict: The response object.
-        Raises:
-            ValueError: Raises an error if required fields are missing or sending the email fails.
-        """
-        if "to" not in obj:
-            raise ValueError("Contiguity requires a recipient to be specified.")
-        if "from" not in obj:
-            raise ValueError("Contiguity requires a sender to be specified.")
-        if "subject" not in obj:
-            raise ValueError("Contiguity requires a subject to be specified.")
-        if "html" not in obj:
-            raise ValueError(
-                "Contiguity requires an email body (text or HTML) to be provided."
-            )
-        if not self.token:
-            raise ValueError(
-                "Contiguity requires a token/API key to be provided via contiguity.login('token')"
-            )
-
-        email_payload = {
-            "to": obj["to"],
-            "from": {"name": obj["from"], "email": obj["email"]},
-            "subject": obj["subject"],
-            "body": minify(obj["html"]) if "html" in obj else obj["text"],
-            "type": "html",
-        }
-
-        email_handler = requests.post(
-            "https://api.contiguity.co/enterprise/email/send",
-            json=email_payload,
-            headers=self.headers,
-        )
-
-        email_handler_response = email_handler.json()
-
-        if email_handler.status_code != 200:
-            raise ValueError(
-                f"Contiguity couldn't send your email. Received: {email_handler.status_code} with reason: \"{email_handler_response['message']}\""
-            )
-        if self.debug:
-            print(
-                f"Contiguity successfully sent your email to {obj['to']}. Crumbs:\n\n{json.dumps(email_handler_response)}"
-            )
-
-        return email_handler_response
-
 
 class Verify:
     def __init__(self, token):
